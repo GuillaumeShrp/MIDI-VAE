@@ -9,7 +9,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import colors
 
-from matplotlib2tikz import save as tikz_save
+from tikzplotlib import save as tikz_save
 
 
 # ----------------------------------------------------------------------------------------------

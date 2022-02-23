@@ -1,13 +1,14 @@
-from keras import objectives, backend as K
-from keras.layers import Bidirectional, Dense, Embedding, Input, Lambda, LSTM, RepeatVector, TimeDistributed, Add, GRU, SimpleRNN
-from keras.models import Model
-from keras.layers import Layer
-import keras
-from recurrentshop import *
-from recurrentshop.cells import LSTMCell, GRUCell, SimpleRNNCell
-from keras.layers.merge import Concatenate
-from keras.utils import to_categorical
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Bidirectional, Dense, Embedding, Input, Lambda, LSTM, RepeatVector, TimeDistributed, Add, GRU, SimpleRNN
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Layer
+#from recurrentshop import *
+#from recurrentshop.cells import LSTMCell, GRUCell, SimpleRNNCell
+from tensorflow.keras.layers import LSTMCell, GRUCell, SimpleRNNCell, Concatenate
+#from tensorflow.keras.layers.merge import Concatenate
+from tensorflow.keras.utils import to_categorical
 
+import tensorflow.keras as keras
 import data_class
 from settings import *
 
@@ -216,6 +217,7 @@ class VAE(object):
             input_x = Input(shape=(self.input_length,self.input_dim), name='notes_input')
             x = input_x
 
+        ### add different input for encoder layers for each roll selected in settings.py
         encoder_input_list = [input_x]
         if self.meta_instrument:
             if self.meta_instrument_length > 0:
@@ -283,6 +285,7 @@ class VAE(object):
         else:
             decoder_additional_input_layer  = False
 
+        ### add different input for decoder layers for each roll selected in settings.py
         if self.meta_instrument:
             input_decoder_meta_instrument_start = Input(shape=(self.meta_instrument_dim,), name='input_decoder_meta_instrument_start')
             decoder_input_list.append(input_decoder_meta_instrument_start)

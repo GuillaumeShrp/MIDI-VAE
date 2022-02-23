@@ -33,7 +33,7 @@ do_not_sample_in_evaluation = True
 
 
 # Folder names or file names will be classified by those labels
-classes = ['style1', 'style2'] #list of strings like 'Bach', 'Mozart'. Name a folder in your source_folder like that and make sure there are no files with that name
+classes = ['JSB_Chorales', 'Nottingham'] #list of strings like 'Bach', 'Mozart'. Name a folder in your source_folder like that and make sure there are no files with that name
 
 #whether to include unknown classes as a third class
 include_unknown = False 
