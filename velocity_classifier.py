@@ -1,15 +1,15 @@
 from settings import *
-from keras.models import Sequential
-from keras import regularizers
-from keras.layers import Input, RepeatVector
-from keras.models import Model
-from keras.layers.recurrent import LSTM, GRU
-from keras.layers import TimeDistributed
-from keras.layers import Dense, Activation
-from keras.layers.embeddings import Embedding
-from keras.optimizers import RMSprop, Adam
-from keras.utils import to_categorical
-from keras.layers.wrappers import Bidirectional
+from tensorflow.keras.models import Sequential
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Input, RepeatVector
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import LSTM, GRU
+from tensorflow.keras.layers import TimeDistributed
+from tensorflow.keras.layers import Dense, Activation
+from tensorflow.keras.layers import Embedding
+from tensorflow.keras.optimizers import RMSprop, Adam
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.layers import Bidirectional
 from random import shuffle
 import progressbar
 import matplotlib
@@ -25,11 +25,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import class_weight
 
 import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
+#from keras.backend.tensorflow_backend import set_session
 import pretty_midi as pm
 import sys
+import time
 
-from matplotlib2tikz import save as tikz_save
+from tikzplotlib import save as tikz_save
 
 from import_midi import import_midi_from_folder
 
@@ -98,7 +99,8 @@ fd = {'highcrop': high_crop, 'lowcrop':low_crop, 'lr': learning_rate, 'opt': opt
 'num_layers':num_layers, 'only_train_note_starts': only_train_note_starts, 
 'velocity_threshold_such_that_it_is_a_played_note': velocity_threshold_such_that_it_is_a_played_note, 
 'scale': scale_velocity_between_0_and_1, 'classes': class_string}
-t = str(int(round(time.time())))
+#t = str(int(round(time.time())))
+t = time.strftime("%Y%m%d-%H%M%S")
 model_name = t+'-num_layers_%(num_layers)s_maxlen_%(input_length)s_otns_%(only_train_note_starts)s_lstmsize_%(lstm_size)s_trainsize_%(trainsize)s_testsize_%(testsize)s_thresh_%(velocity_threshold_such_that_it_is_a_played_note)s_scale_%(scale)s_classes_%(classes)s' % fd
 
 model_path = model_path + model_name + '/'
@@ -152,7 +154,7 @@ def test(testID):
 
     confusion_matrix = np.zeros((num_classes, num_classes))
 
-    bar = progressbar.ProgressBar(max_value=test_set_size, redirect_stdout=False)
+    #bar = progressbar.ProgressBar(max_value=test_set_size, redirect_stdout=False)
     for i, test_song in enumerate(X_test):
 
         X = V_test[i]
@@ -160,6 +162,8 @@ def test(testID):
         num_samples = X.shape[0]
         c = C_test[i]
         Y = np.asarray([to_categorical(c, num_classes=num_classes)]*num_samples).squeeze()
+        print(X.shape)
+        print(C_train)
 
         scores = model.evaluate(X,Y , batch_size=batch_size, verbose=verbose)
         if reset_states:
@@ -171,7 +175,7 @@ def test(testID):
             y_class_test = np.argmax(y_val)
             y_class_predicted = np.argmax(y_predicted)
             confusion_matrix[y_class_predicted, y_class_test] += 1
-        bar.update(i+1)
+        #bar.update(i+1)
 
     accuracy = np.sum(np.diagonal(confusion_matrix)) / np.sum(confusion_matrix)
     total_test_loss_array.append(total_test_loss/test_set_size)
@@ -251,7 +255,7 @@ for e in range(1, epochs+1):
         D_train = [D_train[i] for i in permutation]
         T_train = [T_train[i] for i in permutation]
 
-    bar = progressbar.ProgressBar(max_value=train_set_size)
+    #bar = progressbar.ProgressBar(max_value=train_set_size)
     
     # Train model with each song seperately
     for i, train_song in enumerate(X_train):
@@ -276,7 +280,7 @@ for e in range(1, epochs+1):
 
             total_train_loss += np.mean(hist.history['loss'])
             total_train_accuracy += np.mean(hist.history['acc'])
-        bar.update(i+1)
+        #bar.update(i+1)
     if (e+1)%test_step is 0:
         total_train_loss = total_train_loss/train_set_size
         total_train_loss_array.append(total_train_loss)

@@ -25,7 +25,7 @@ from sklearn.utils import class_weight
 import tensorflow as tf
 #from keras.backend.tensorflow_backend import set_session
 import pretty_midi as pm
-import sys
+import sys, time
 from import_midi import import_midi_from_folder
 from tikzplotlib import save as tikz_save
 
@@ -78,7 +78,8 @@ fd = {'highcrop': high_crop, 'lowcrop':low_crop, 'lr': learning_rate, 'opt': opt
 'bi': bidirectional, 'lstm_size': lstm_size, 'trainsize': train_set_size, 
 'testsize': test_set_size, 'input_length': input_length, 'reset_states': reset_states, 
 'num_layers':num_layers, 'classes':class_string}
-t = str(int(round(time.time())))
+
+t = time.strftime("%Y%m%d-%H%M%S")
 model_name = t+'-num_layers_%(num_layers)s_maxlen_%(input_length)s_lstmsize_%(lstm_size)s_trainsize_%(trainsize)s_testsize_%(testsize)s_classes_%(classes)s' % fd
 
 model_path = model_path + model_name + '/'
@@ -232,7 +233,7 @@ for e in range(epochs):
 
             print(X.shape)
             print(Y.shape)
-
+            print(C_train)
 
             hist = model.fit(X, Y,
                         epochs=1,

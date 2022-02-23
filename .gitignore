@@ -1,0 +1,6 @@
+/data/
+/pickles/
+/__pycache__/
+/models/instrumentclustering/
+/models/velocityclustering/
+/models/pitchclustering/
