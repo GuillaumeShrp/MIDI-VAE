@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------------------------
 
 from settings import *
-from keras.utils import to_categorical
+#from tensorflow.keras.utils import to_categorical
 from random import shuffle
 import progressbar
 import matplotlib
@@ -17,15 +17,18 @@ import time
 import vae_definition
 from vae_definition import VAE
 import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
+#from keras.backend.tensorflow_backend import set_session
 from sklearn.utils import class_weight
 from sklearn.model_selection import train_test_split
 import pretty_midi as pm
-import sys
+import sys, time
 from import_midi import import_midi_from_folder
 import data_class
-from matplotlib2tikz import save as tikz_save
+from tikzplotlib import save as tikz_save
 
+# remove depreciation warnings 
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 # ----------------------------------------------------------------------------------------------
 # Set parameters for training session (not for VAE)
@@ -48,7 +51,7 @@ model = VAE()
 model.create( input_dim=input_dim, 
     output_dim=output_dim, 
     use_embedding=use_embedding, 
-    embedding_dim=embedding_dim, 
+    embedding_dim=embedding_dim, #no embedding (cf. setting.py: dim=0)
     input_length=input_length,
     output_length=output_length, 
     latent_rep_size=latent_dim, 
@@ -58,7 +61,7 @@ model.create( input_dim=input_dim,
     lstm_activation=lstm_activation, 
     lstm_state_activation=lstm_state_activation,
     epsilon_std=epsilon_std, 
-    epsilon_factor=epsilon_factor,
+    epsilon_factor=epsilon_factor, #not used
     include_composer_decoder=include_composer_decoder,
     num_composers=num_composers, 
     composer_weight=composer_weight, 
@@ -75,7 +78,7 @@ model.create( input_dim=input_dim,
     beta=beta, 
     prior_mean=prior_mean,
     prior_std=prior_std,
-    decoder_additional_input=decoder_additional_input, 
+    decoder_additional_input=decoder_additional_input, #not used
     decoder_additional_input_dim=decoder_additional_input_dim, 
     extra_layer=extra_layer,
     meta_instrument= meta_instrument,
@@ -87,21 +90,21 @@ model.create( input_dim=input_dim,
     signature_dim = signature_dim,
     signature_activation = signature_activation,
     signature_weight = signature_weight,
-    composer_decoder_at_notes_output=composer_decoder_at_notes_output,
+    composer_decoder_at_notes_output=composer_decoder_at_notes_output, #not used
     composer_decoder_at_notes_weight=composer_decoder_at_notes_weight,
     composer_decoder_at_notes_activation=composer_decoder_at_notes_activation,
-    composer_decoder_at_instrument_output=composer_decoder_at_instrument_output,
+    composer_decoder_at_instrument_output=composer_decoder_at_instrument_output, #not used
     composer_decoder_at_instrument_weight=composer_decoder_at_instrument_weight,
     composer_decoder_at_instrument_activation=composer_decoder_at_instrument_activation,
     meta_velocity=meta_velocity,
     meta_velocity_length=meta_velocity_length,
     meta_velocity_activation=meta_velocity_activation,
     meta_velocity_weight=meta_velocity_weight,
-    meta_held_notes=meta_held_notes,
+    meta_held_notes=meta_held_notes, #not used
     meta_held_notes_length=meta_held_notes_length,
     meta_held_notes_activation=meta_held_notes_activation,
     meta_held_notes_weight=meta_held_notes_weight,
-    meta_next_notes=meta_next_notes,
+    meta_next_notes=meta_next_notes, #not used
     meta_next_notes_output_length=meta_next_notes_output_length,
     meta_next_notes_weight=meta_next_notes_weight,
     meta_next_notes_teacher_force=meta_next_notes_teacher_force,
@@ -159,6 +162,7 @@ fd = {'include_composer_feature': include_composer_feature, 'highcrop': high_cro
 'bi': bidirectional, 'lstm_size': lstm_size, 'latent': latent_dim, 'trainsize': train_set_size, 'testsize': test_set_size, 'input_length': input_length,
 'output_length': output_length, 'reset_states': reset_states, 'compdec': include_composer_decoder, 'num_layers_encoder': num_layers_encoder, 'num_layers_decoder': num_layers_decoder, 
 'beta': beta, 'lr': learning_rate, 'epsstd': epsilon_std}
+t = time.strftime("%Y%m%d-%H%M%S")
 model_name = t+'-_ls_inlen_%(input_length)s_outlen_%(output_length)s_beta_%(beta)s_lr_%(lr)s_lstmsize_%(lstm_size)s_latent_%(latent)s_trainsize_%(trainsize)s_testsize_%(testsize)s_epsstd_%(epsstd)s' % fd
 
 model_path = model_path + model_name + '/'
@@ -269,7 +273,7 @@ def test():
     total_test_loss_composer_instrument = 0
     total_test_composer_instrument_accuracy = 0
     
-    bar = progressbar.ProgressBar(max_value=test_set_size, redirect_stdout=False)
+    #bar = progressbar.ProgressBar(max_value=test_set_size, redirect_stdout=False)
     for test_song_num in range(len(X_test)):
 
         X = X_test[test_song_num]
@@ -354,7 +358,7 @@ def test():
             autoencoder.reset_states()
         
               
-        bar.update(test_song_num+1)
+        #bar.update(test_song_num+1)
 
     plt.close('all')
     f, axarr = plt.subplots(3,2, sharex=True, figsize=(15.0, 20.0))
@@ -771,7 +775,7 @@ for e in range(start_epoch, epochs):
         T_train = [T_train[i] for i in permutation]
         
 
-    bar = progressbar.ProgressBar(max_value=train_set_size)
+    #bar = progressbar.ProgressBar(max_value=train_set_size)
     for train_song_num in range(len(X_train)):
 
         X = X_train[train_song_num]
@@ -811,25 +815,26 @@ for e in range(start_epoch, epochs):
         if reset_states:
             autoencoder.reset_states()
 
-        bar.update(train_song_num+1)
+        #bar.update(train_song_num+1)
 
 
         total_train_loss += np.mean(hist.history['loss'])
+        print(hist.history)
 
         #make sure you have installed keras=2.0.8 if you receive only one loss instead of decoder_loss_0,1,2... for each output
         #did not work for keras=2.1.4
         if meta_instrument or meta_velocity or meta_held_notes or meta_next_notes:
             count = 1
             total_train_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])
-            total_train_notes_loss += np.mean(hist.history['decoder_loss_' + str(count)])
+            #total_train_notes_loss += np.mean(hist.history['decoder_loss_' + str(count)])
             if meta_instrument:
                 count += 1
                 total_train_meta_instrument_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])
-                total_train_meta_instrument_loss += np.mean(hist.history['decoder_loss_' + str(count)])
+                #total_train_meta_instrument_loss += np.mean(hist.history['decoder_loss_' + str(count)])
             if meta_velocity:
                 count += 1
                 total_train_meta_velocity_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])
-                total_train_meta_velocity_loss += np.mean(hist.history['decoder_loss_' + str(count)])
+                #total_train_meta_velocity_loss += np.mean(hist.history['decoder_loss_' + str(count)])
             if meta_held_notes:
                 count += 1
                 total_train_meta_held_notes_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])

@@ -1,14 +1,14 @@
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Bidirectional, Dense, Embedding, Input, Lambda, LSTM, RepeatVector, TimeDistributed, Add, GRU, SimpleRNN
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Layer
-#from recurrentshop import *
-#from recurrentshop.cells import LSTMCell, GRUCell, SimpleRNNCell
-from tensorflow.keras.layers import LSTMCell, GRUCell, SimpleRNNCell, Concatenate
-#from tensorflow.keras.layers.merge import Concatenate
-from tensorflow.keras.utils import to_categorical
+import keras.backend as K
+#from tensorflow.keras import backend as K
+from keras.layers import Bidirectional, Dense, Embedding, Input, Lambda, LSTM, RepeatVector, TimeDistributed, Add, GRU, SimpleRNN, Activation, Concatenate, Layer
+from keras.models import Model
+from recurrentshop import *
+from recurrentshop.cells import LSTMCell, GRUCell, SimpleRNNCell
+#from tensorflow.keras.layers import LSTMCell, GRUCell, SimpleRNNCell
+from keras.utils import to_categorical
 
-import tensorflow.keras as keras
+import keras
+#import tensorflow.keras as keras
 import data_class
 from settings import *
 
@@ -211,7 +211,7 @@ class VAE(object):
 
         
         if self.use_embedding:
-            input_x = Input(shape=(self.input_length,), name='embedding_input')
+            input_x = Input(shape=(self.input_length,), name='embedding_input') # expected input will be batches of input_length-dimensional vectors
             x = Embedding(self.input_dim, self.embedding_dim)(input_x)
         else:
             input_x = Input(shape=(self.input_length,self.input_dim), name='notes_input')
@@ -261,7 +261,7 @@ class VAE(object):
         autoencoder_output_list = []
 
         
-        if self.teacher_force:
+        if self.teacher_force: # not used
             ground_truth_input = Input(shape=(self.output_length, self.output_dim), name='ground_truth_input')
             decoder_input_list.append(ground_truth_input)
             autoencoder_decoder_input_list.append(ground_truth_input)
@@ -269,7 +269,7 @@ class VAE(object):
         else:
             ground_truth_input = None
 
-        if self.history:
+        if self.history: # used
             history_input = Input(shape=(self.latent_rep_size,), name='history_input')
             decoder_input_list.append(history_input)
             autoencoder_decoder_input_list.append(history_input)
@@ -277,7 +277,7 @@ class VAE(object):
         else:
             history_input = None
 
-        if decoder_additional_input:
+        if decoder_additional_input: # not used
             decoder_additional_input_layer = Input(shape=(decoder_additional_input_dim,), name='decoder_additional_input')
             decoder_input_list.append(decoder_additional_input_layer )
             autoencoder_decoder_input_list.append(decoder_additional_input_layer )
@@ -329,8 +329,11 @@ class VAE(object):
             input_decoder_meta_next_notes_start = None
             meta_next_notes_ground_truth_input = None
 
+        #print("--------- STRAIGHT FORWARD ---------")
 
-        decoded, meta_instrument_output, meta_velocity_output, meta_held_notes_output, meta_next_notes_output = self._build_decoder(decoder_x, encoded_input, ground_truth_input, history_input, decoder_additional_input_layer, input_decoder_meta_instrument_start, input_decoder_meta_velocity_start, input_decoder_meta_held_notes_start, input_decoder_meta_next_notes_start, meta_next_notes_ground_truth_input)
+        decoded, meta_instrument_output, meta_velocity_output, meta_held_notes_output, meta_next_notes_output = self._build_decoder(decoder_x, encoded_input, 
+            ground_truth_input, history_input, decoder_additional_input_layer, 
+            input_decoder_meta_instrument_start, input_decoder_meta_velocity_start, input_decoder_meta_held_notes_start, input_decoder_meta_next_notes_start, meta_next_notes_ground_truth_input)
 
         loss_list = []
         loss_weights_list = []
@@ -445,7 +448,7 @@ class VAE(object):
 
     def _build_encoder(self, x, meta_instrument_input=None, meta_velocity_input=None, meta_held_notes_input=None):
         h = x
-        if self.bidirectional:
+        if self.bidirectional: #always false: musique is design to be read in only one direction (left to right)
 
             for layer_no in range(1,self.num_layers_encoder-1):
                 if self.cell_type == 'SimpleRNN': h = Bidirectional(SimpleRNN(self.lstm_size, return_sequences=True, activation=self.lstm_activation, name='rnn_' + str(layer_no)), merge_mode='concat')(h)
@@ -491,8 +494,8 @@ class VAE(object):
 
         if self.split_lstm_vector:
             half_size = int(self.lstm_size/2)
-            h_1 = Lambda(lambda x : x[:,:half_size], output_shape=(half_size,))(h)
-            h_2 = Lambda(lambda x : x[:,half_size:], output_shape=(self.lstm_size-half_size,))(h)
+            h_1 = Lambda(lambda x : x[:,:half_size], name='h_1', output_shape=(half_size,))(h)
+            h_2 = Lambda(lambda x : x[:,half_size:], name='h_2', output_shape=(self.lstm_size-half_size,))(h)
 
         else:
             h_1 = h
@@ -509,7 +512,7 @@ class VAE(object):
         z_mean = Dense(self.latent_rep_size, name='z_mean', activation='linear', kernel_initializer='glorot_uniform')(h_1)
         z_log_var = Dense(self.latent_rep_size, name='z_log_var', activation='linear', kernel_initializer='glorot_uniform')(h_2)
         
-        if epsilon_factor > 0:
+        if epsilon_factor > 0: # not used
             e = Input(shape=(1,), tensor=K.constant(self.epsilon_factor))
             scaled_z_log_var = Add()[z_log_var, e]
             z_mean, scaled_z_log_var = KLDivergenceLayer(beta=self.beta, prior_mean=self.prior_mean, prior_std=self.prior_std, name='kl_layer')([z_mean, scaled_z_log_var])
@@ -522,12 +525,13 @@ class VAE(object):
     def _build_decoder(self, input_layer, encoded, ground_truth, history_input, decoder_additional_input_layer, input_decoder_meta_instrument_start, input_decoder_meta_velocity_start, input_decoder_meta_held_notes_start, input_decoder_meta_next_notes_start, meta_next_notes_ground_truth_input):
 
         input_states = []
+        # build decoder state architecture:
         for layer_no in range(0,self.num_layers_decoder):
 
             state_c = Input((self.lstm_size,))
             input_states.append(state_c)
 
-            if self.cell_type == 'LSTM':
+            if self.cell_type == 'LSTM': # otherwise it's a GRU cell so only c in required 
                 state_h = Input((self.lstm_size,))
                 input_states.append(state_h)
         
@@ -539,14 +543,16 @@ class VAE(object):
             if self.cell_type == 'GRU': lstm_output, state1_t = GRUCell(self.lstm_size)([lstm_input, input_states[layer_no]])
             lstm_input = lstm_output
             final_states.append(state1_t)
-            if self.cell_type == 'LSTM':
+            if self.cell_type == 'LSTM': # cf: cell states architectures
                 final_states.append(state2_t)
 
         output = Dense(self.output_dim, activation=self.activation)(lstm_output)
         # use learn_mode = 'join', test_mode = 'viterbi', sparse_target = True (label indice output)
         
         readout_input_sequence = Input((self.output_length,self.output_dim))
-        rnn = RecurrentModel(input_layer, output, initial_states=input_states, final_states=final_states, readout_input=readout_input_sequence, teacher_force=self.teacher_force, decode=self.decode, output_length=self.output_length, return_states=False, state_initializer=None, name='notes')
+        rnn = RecurrentModel(input_layer, output, initial_states=input_states, final_states=final_states, 
+                readout_input=readout_input_sequence, teacher_force=self.teacher_force, decode=self.decode, 
+                output_length=self.output_length, return_states=False, state_initializer=None, name='notes')
 
         if self.history:
             new_encoded = Concatenate()([encoded, history_input])
@@ -1145,7 +1151,7 @@ def process_decoder_outputs(decoder_outputs, sample_method):
         num_samples = Y.shape[0]
         Y = sample_notes_prediction(Y, sample_method)
         count = 1
-        if meta_instrument or meta_velocity or meta_held_notes_output or meta_next_notes:
+        if meta_instrument or meta_velocity or meta_held_notes or meta_next_notes:
             meta_instrument_pred = decoder_outputs[count]
             I = sample_instrument_prediction(meta_instrument_pred, sample_method)
             count += 1

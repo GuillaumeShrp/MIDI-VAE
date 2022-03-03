@@ -105,7 +105,7 @@ song_completion = False
 # VAE parameters (for vae_training and vae_evaluation)
 #------------------------------------
 
-input_length =  16
+input_length =  16 # "We choose the 16th note as smallest unit"
 output_length = 16
 lstm_size = 256
 latent_dim = 256
@@ -204,7 +204,7 @@ if composer_decoder_at_notes_output or composer_decoder_at_instrument_output or 
 else:
     num_composers = 0
 
-input_dim = new_num_notes + composer_length + silent_dim + instrument_dim
+input_dim = new_num_notes + composer_length + silent_dim + instrument_dim # 60+0+1+0 = 61 because not attached instrument
 output_dim = new_num_notes+silent_dim + instrument_dim
 
 # use velocity roll
