@@ -17,6 +17,7 @@ import time
 import vae_definition
 from vae_definition import VAE
 import tensorflow as tf
+from keras import callbacks
 #from keras.backend.tensorflow_backend import set_session
 from sklearn.utils import class_weight
 from sklearn.model_selection import train_test_split
@@ -27,7 +28,6 @@ import data_class
 from tikzplotlib import save as tikz_save
 
 # remove depreciation warnings 
-import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 # ----------------------------------------------------------------------------------------------
@@ -805,6 +805,10 @@ for e in range(start_epoch, epochs):
 
         input_list, output_list, sample_weight = vae_definition.prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_weight=True)
 
+        tensorboard_callback = callbacks.TensorBoard(
+            log_dir = "tb_callback_dir", histogram_freq = 1,
+        )
+
         hist = autoencoder.fit(input_list, output_list,
                 epochs=1,
                 batch_size=batch_size,
@@ -819,22 +823,21 @@ for e in range(start_epoch, epochs):
 
 
         total_train_loss += np.mean(hist.history['loss'])
-        print(hist.history)
 
         #make sure you have installed keras=2.0.8 if you receive only one loss instead of decoder_loss_0,1,2... for each output
         #did not work for keras=2.1.4
         if meta_instrument or meta_velocity or meta_held_notes or meta_next_notes:
             count = 1
             total_train_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])
-            #total_train_notes_loss += np.mean(hist.history['decoder_loss_' + str(count)])
+            total_train_notes_loss += np.mean(hist.history['decoder_loss_' + str(count)])
             if meta_instrument:
                 count += 1
                 total_train_meta_instrument_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])
-                #total_train_meta_instrument_loss += np.mean(hist.history['decoder_loss_' + str(count)])
+                total_train_meta_instrument_loss += np.mean(hist.history['decoder_loss_' + str(count)])
             if meta_velocity:
                 count += 1
                 total_train_meta_velocity_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])
-                #total_train_meta_velocity_loss += np.mean(hist.history['decoder_loss_' + str(count)])
+                total_train_meta_velocity_loss += np.mean(hist.history['decoder_loss_' + str(count)])
             if meta_held_notes:
                 count += 1
                 total_train_meta_held_notes_accuracy += np.mean(hist.history['decoder_acc_' + str(count)])

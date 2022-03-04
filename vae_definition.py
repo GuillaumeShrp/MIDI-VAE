@@ -394,7 +394,7 @@ class VAE(object):
             sample_weight_modes.append('None')
 
         
-        if self.include_composer_decoder:
+        if self.include_composer_decoder: # not used
             predicted_composer = self._build_composer_decoder(encoded_input)
             self.composer_decoder = Model(encoded_input, predicted_composer, name='composer_decoder')
             autoencoder_output_list.append(self.composer_decoder(encoded))
@@ -440,6 +440,7 @@ class VAE(object):
             
 
         self.autoencoder = Model(inputs=autoencoder_input_list, outputs=autoencoder_output_list, name='autoencoder')
+        print(loss_list)
         self.autoencoder.compile(optimizer=self.optimizer,
                                  loss=loss_list,
                                  loss_weights=loss_weights_list,
@@ -546,7 +547,7 @@ class VAE(object):
             if self.cell_type == 'LSTM': # cf: cell states architectures
                 final_states.append(state2_t)
 
-        output = Dense(self.output_dim, activation=self.activation)(lstm_output)
+        output = Dense(self.output_dim, activation=self.activation, name='decoder_output')(lstm_output)
         # use learn_mode = 'join', test_mode = 'viterbi', sparse_target = True (label indice output)
         
         readout_input_sequence = Input((self.output_length,self.output_dim))
@@ -555,11 +556,11 @@ class VAE(object):
                 output_length=self.output_length, return_states=False, state_initializer=None, name='notes')
 
         if self.history:
-            new_encoded = Concatenate()([encoded, history_input])
+            new_encoded = Concatenate(name='add_history_input')([encoded, history_input])
         else:
             new_encoded = encoded
 
-        if self.decoder_additional_input:
+        if self.decoder_additional_input: # not used
             new_encoded = Concatenate()([new_encoded, decoder_additional_input_layer])
         else:
             new_encoded = new_encoded
@@ -569,7 +570,7 @@ class VAE(object):
         for layer_no in range(0,self.num_layers_decoder):
         
             
-            encoded_c = Dense(self.lstm_size, activation=self.lstm_state_activation, bias_initializer=bias_initializer)(new_encoded)
+            encoded_c = Dense(self.lstm_size, activation=self.lstm_state_activation, bias_initializer=bias_initializer, name='state_'+str(layer_no))(new_encoded)
             initial_states.append(encoded_c)
 
             if self.cell_type == 'LSTM':
@@ -600,12 +601,14 @@ class VAE(object):
 
             readout_input_sequence = Input((self.meta_instrument_length,self.meta_instrument_dim))
             output = Dense(self.meta_instrument_dim, activation=self.meta_instrument_activation)(lstm_output)
-            rnn = RecurrentModel(input_decoder_meta_instrument_start, output, initial_states=input_states, final_states=final_states, readout_input=readout_input_sequence, teacher_force=False, decode=self.decode, output_length=self.meta_instrument_length, return_states=False, state_initializer=None, name='meta_instrument')
+            rnn = RecurrentModel(input_decoder_meta_instrument_start, output, initial_states=input_states, final_states=final_states, 
+                readout_input=readout_input_sequence, teacher_force=False, decode=self.decode, output_length=self.meta_instrument_length, 
+                return_states=False, state_initializer=None, name='meta_instrument')
             
             initial_states = []
             bias_initializer = 'zeros'
 
-            encoded_c = Dense(self.lstm_size, activation=self.lstm_state_activation, bias_initializer=bias_initializer)(new_encoded)
+            encoded_c = Dense(self.lstm_size, activation=self.lstm_state_activation, bias_initializer=bias_initializer, name='state_meta_instrument')(new_encoded)
             initial_states.append(encoded_c)
 
             if self.cell_type == 'LSTM':
@@ -643,7 +646,7 @@ class VAE(object):
             initial_states = []
             bias_initializer = 'zeros'
 
-            encoded_c = Dense(self.lstm_size, activation=self.lstm_state_activation, bias_initializer=bias_initializer)(new_encoded)
+            encoded_c = Dense(self.lstm_size, activation=self.lstm_state_activation, bias_initializer=bias_initializer, name='state_meta_velocity')(new_encoded)
             initial_states.append(encoded_c)
 
             if self.cell_type == 'LSTM':
