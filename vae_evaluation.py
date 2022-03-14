@@ -20,12 +20,12 @@ import time
 import csv
 from collections import defaultdict
 
-from keras.models import load_model, model_from_yaml
-from keras.utils import to_categorical
+from tensorflow.keras.models import load_model, model_from_yaml
+from tensorflow.keras.utils import to_categorical
 from sklearn.utils import class_weight
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from matplotlib2tikz import save as tikz_save
+from tikzplotlib import save as tikz_save
 import pretty_midi as pm
 import scipy
 
@@ -72,20 +72,21 @@ switch_styles = True
 # ----------------------------------------------------------------------------------------------
 
 
-model_name = 'your_model_name/'
-epoch = 410
+model_name = '20220310-104742-_ls_inlen_64_outlen_64_beta_0.1_lr_0.0002_lstmsize_256_latent_256_trainsize_815_testsize_91_epsstd_0.01/'
+epoch = 100
 
-pitches_classifier_model_path = './models/clustering/-/'
-pitches_classifier_model_name = 'modelEpoch?.pickle'
+pitches_classifier_model_path = './models/pitchclustering/20220310-094921-num_layers_2_maxlen_64_lstmsize_256_trainsize_1277_testsize_142_classes_JSB_ChoralesNottingham/'
+pitches_classifier_model_name = 'modelEpoch0.pickle'
 pitches_classifier_model = load_model(pitches_classifier_model_path+pitches_classifier_model_name)
 pitches_classifier_model_weight = 0.999 - 0.5 #subtract 0.5 since you would want to weight a random model with 0
 
-velocity_classifier_model_path = './models/velocityclustering/1521669531-num_layers_2_maxlen_64_otns_False_lstmsize_256_trainsize_909_testsize_104_thresh_0.5_scale_False/'
-velocity_classifier_model_name = 'modelEpoch?.pickle'
+velocity_classifier_model_path = './models/velocityclustering/20220310-102542-num_layers_2_maxlen_64_otns_False_lstmsize_256_trainsize_815_testsize_91_thresh_0.5_scale_False_classes_JSB_ChoralesNottingham/'
+velocity_classifier_model_name = 'modelEpoch10.pickle'
 velocity_classifier_model = load_model(velocity_classifier_model_path+velocity_classifier_model_name)
 velocity_classifier_model_weight = 0.999 - 0.5
 
-instrument_classifier_model_path = './models/instrumentclustering/-/'
+
+instrument_classifier_model_path = './models/instrumentclustering/1646647074-num_layers_2_maxlen_64_lstmsize_256_trainsize_18_testsize_2_classes_JSB_ChoralesNottingham/'
 instrument_classifier_model_name = 'modelEpoch?.pickle'
 instrument_classifier_model = load_model(instrument_classifier_model_path+instrument_classifier_model_name)
 instrument_classifier_model_weight = 0.999 - 0.5

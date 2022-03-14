@@ -29,6 +29,9 @@ import sys, time
 from import_midi import import_midi_from_folder
 from tikzplotlib import save as tikz_save
 
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+print(sess)
+
 
 model_path = 'models/pitchclustering/'
 model_filetype = '.pickle'
@@ -230,11 +233,6 @@ for e in range(epochs):
         if num_samples > 1:
             c = C_train[i]
             Y = np.asarray([to_categorical(c, num_classes=num_classes)]*num_samples).squeeze()
-
-            print(X.shape)
-            print(Y.shape)
-            print(C_train)
-
             hist = model.fit(X, Y,
                         epochs=1,
                         batch_size=batch_size,
