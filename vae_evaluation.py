@@ -44,23 +44,23 @@ from import_midi import import_midi_from_folder
 harmonicity_evaluations = False
 frankenstein_harmonicity_evaluations = False # runs only if harmonicity_evaluations are turned on
 
-max_new_chosen_interpolation_songs = 42
+max_new_chosen_interpolation_songs = 3 #42
 interpolation_length = 4 #how many iterations?
 how_many_songs_in_one_medley = 3
 noninterpolated_samples_between_interpolation = 8 #should be at least 1, otherwise it can not interpolate
 
-max_new_sampled_interpolation_songs = 42
+max_new_sampled_interpolation_songs = 3 #42
 interpolation_song_length = 10 #how many iterations?
 
 latent_sweep = True
-num_latent_sweep_samples = 100
+num_latent_sweep_samples = 3 #100
 num_latent_sweep_evaluation_songs = 10
 
 chord_evaluation = True
 evaluate_different_sampling_regions = True
 pitch_evaluation = True
-max_new_sampled_songs = 100
-max_new_sampled_long_songs = 100
+max_new_sampled_songs = 3 #100
+max_new_sampled_long_songs = 3 #100
 
 evaluate_autoencoding_and_stuff = True
 mix_with_previous = True
@@ -73,10 +73,11 @@ switch_styles = True
 
 
 model_name = '20220310-104742-_ls_inlen_64_outlen_64_beta_0.1_lr_0.0002_lstmsize_256_latent_256_trainsize_815_testsize_91_epsstd_0.01/'
-epoch = 100
+epoch = 90
 
 pitches_classifier_model_path = './models/pitchclustering/20220310-094921-num_layers_2_maxlen_64_lstmsize_256_trainsize_1277_testsize_142_classes_JSB_ChoralesNottingham/'
 pitches_classifier_model_name = 'modelEpoch0.pickle'
+print(pitches_classifier_model_path+pitches_classifier_model_name)
 pitches_classifier_model = load_model(pitches_classifier_model_path+pitches_classifier_model_name)
 pitches_classifier_model_weight = 0.999 - 0.5 #subtract 0.5 since you would want to weight a random model with 0
 
@@ -85,11 +86,10 @@ velocity_classifier_model_name = 'modelEpoch10.pickle'
 velocity_classifier_model = load_model(velocity_classifier_model_path+velocity_classifier_model_name)
 velocity_classifier_model_weight = 0.999 - 0.5
 
-
-instrument_classifier_model_path = './models/instrumentclustering/1646647074-num_layers_2_maxlen_64_lstmsize_256_trainsize_18_testsize_2_classes_JSB_ChoralesNottingham/'
-instrument_classifier_model_name = 'modelEpoch?.pickle'
-instrument_classifier_model = load_model(instrument_classifier_model_path+instrument_classifier_model_name)
-instrument_classifier_model_weight = 0.999 - 0.5
+#instrument_classifier_model_path = './models/instrumentclustering/1646647074-num_layers_2_maxlen_64_lstmsize_256_trainsize_18_testsize_2_classes_JSB_ChoralesNottingham/'
+#instrument_classifier_model_name = 'modelEpoch?.pickle'
+#instrument_classifier_model = load_model(instrument_classifier_model_path+instrument_classifier_model_name)
+#instrument_classifier_model_weight = 0.999 - 0.5
 
 
 
@@ -111,10 +111,10 @@ if not os.path.exists(save_folder):
 def ensemble_prediction(Y,I,V):
 
     pitch_prediction = pitches_classifier_model.predict(Y)
-    instrument_prediction = instrument_classifier_model.predict(I)
+    #instrument_prediction = instrument_classifier_model.predict(I)
     velocity_prediction = velocity_classifier_model.predict(V)
 
-    weighted_prediction = (pitch_prediction * pitches_classifier_model_weight + instrument_prediction * instrument_classifier_model_weight + velocity_prediction * velocity_classifier_model_weight) / (pitches_classifier_model_weight + instrument_classifier_model_weight + velocity_classifier_model_weight)
+    weighted_prediction = (pitch_prediction * pitches_classifier_model_weight + velocity_prediction * velocity_classifier_model_weight) / (pitches_classifier_model_weight + velocity_classifier_model_weight)
     return weighted_prediction
 
 # ----------------------------------------------------------------------------------------------
@@ -144,6 +144,7 @@ sample_method = 'argmax' #choice, argmax
 print('loading data...')
 # Get Train and test sets
 
+rolls = True
 if rolls:
     folder = source_folder
 else:
@@ -1184,7 +1185,7 @@ def latent_sweep_over_all_dimensions(start_latent_vector, song_name='', range_en
             programs = vote_for_programs(I_list)
             summary_dict.update(evaluate_pitchroll(Y_list))
             summary_dict.update(evaluate_velocityroll(V_list))
-            summary_dict.update(evaluate_instrumentlist(I_list))
+            #summary_dict.update(evaluate_instrumentlist(I_list))
             all_dimension_summaries_list.append(summary_dict)
             
             for key, value in summary_dict.items():
@@ -2086,8 +2087,8 @@ if evaluate_autoencoding_and_stuff:
         original_ensemble_classifier_confidence = 0.0
 
         #calculate instrument style classifier accuracy
-        instrument_classifier_input = np.asarray([I])
-        instrument_classifier_prediction = instrument_classifier_model.predict(instrument_classifier_input)[0]
+        #instrument_classifier_input = np.asarray([I])
+        #instrument_classifier_prediction = instrument_classifier_model.predict(instrument_classifier_input)[0]
         #get the confidence of the style classifier
         instrument_confidence = instrument_classifier_prediction[C]
         original_instrument_classifier_confidence += instrument_confidence
