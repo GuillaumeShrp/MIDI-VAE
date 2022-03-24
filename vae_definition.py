@@ -505,7 +505,7 @@ class VAE(object):
         def sampling(args):
             z_mean_, z_log_var_ = args
             batch_size = K.shape(z_mean_)[0]
-            epsilon = K.random_normal(shape=(batch_size, self.latent_rep_size), mean=0., stddev=self.epsilon_std)
+            epsilon = K.random_normal(shape=(batch_size, self.  _rep_size), mean=0., stddev=self.epsilon_std)
             return z_mean_ + K.exp(z_log_var_ / 2) * epsilon 
 
         #s_3 = (s_1^2 * s_2^2) / (s_1^2 + s_2^2)
@@ -519,7 +519,10 @@ class VAE(object):
             z_mean, scaled_z_log_var = KLDivergenceLayer(beta=self.beta, prior_mean=self.prior_mean, prior_std=self.prior_std, name='kl_layer')([z_mean, scaled_z_log_var])
         else:
             z_mean, z_log_var = KLDivergenceLayer(beta=self.beta, prior_mean=self.prior_mean, prior_std=self.prior_std, name='kl_layer')([z_mean, z_log_var])
-        z = Lambda(sampling, output_shape=(self.latent_rep_size,), name='lambda')([z_mean, z_log_var])
+        z_content = Lambda(sampling, output_shape=(self.latent_rep_size,), name='lambda')([z_mean, z_log_var])
+
+        z = Concatenate(name=)([z_content,z_style])
+
         return (z)
 
 
