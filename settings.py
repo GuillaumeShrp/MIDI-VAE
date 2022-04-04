@@ -5,7 +5,7 @@ import numpy as np
 
 
 # This is where you should put your midi files
-source_folder = 'data/original/'
+source_folder = 'data/'
 
 # fast way to import data once you have preprocessed them and saved in a pickle file
 pickle_load_path = 'pickles/'
@@ -33,7 +33,7 @@ do_not_sample_in_evaluation = True
 
 
 # Folder names or file names will be classified by those labels
-classes = ['JSB_Chorales', 'Nottingham'] #list of strings like 'Bach', 'Mozart'. Name a folder in your source_folder like that and make sure there are no files with that name
+classes = ['Jazz', 'Nottingham'] #list of strings like 'Bach', 'Mozart'. Name a folder in your source_folder like that and make sure there are no files with that name
 
 #whether to include unknown classes as a third class
 include_unknown = False 
@@ -62,8 +62,8 @@ if save_imported_midi_as_pickle:
 
 save_anything = True
 
-split_equally_to_train_and_test = True
-test_fraction = 0.1
+split_equally_to_train_and_test = False
+test_fraction = 0.2
 save_preprocessed_midi = False
 smaller_training_set_factor = 1.0 #multiply training set size by that factor (if higher than 1.0, will have unbalanced dataset if split_equally_to_train_and_test)
 
