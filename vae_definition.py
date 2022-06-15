@@ -1,6 +1,6 @@
 import keras.backend as K
 #from tensorflow.keras import backend as K
-from keras.layers import Bidirectional, Dense, Embedding, Input, Lambda, LSTM, RepeatVector, TimeDistributed, Add, GRU, SimpleRNN, Activation, Concatenate, Layer
+from keras.layers import Bidirectional, Dense, Embedding, Input, Lambda, LSTM, RepeatVector, TimeDistributed, Add, GRU, SimpleRNN, Activation, Concatenate, Layer, Add, Dot
 from keras.models import Model
 from recurrentshop import *
 from recurrentshop.cells import LSTMCell, GRUCell, SimpleRNNCell
@@ -12,12 +12,11 @@ import keras
 import data_class
 from settings import *
 
-
+## ADDON 
+#ohc = tfp.distributions.OneHotCategorical --> add probabilistique module to tf env
 class KLDivergenceLayer(Layer):
 
-    """ Identity transform layer that adds KL divergence
-    to the final model loss.
-    """
+    """ Identity transform layer that adds KL divergence to the final model loss """
 
     def __init__(self, beta=1.0, prior_mean=0.0, prior_std=1.0, *args, **kwargs):
         self.is_placeholder = True
@@ -35,6 +34,21 @@ class KLDivergenceLayer(Layer):
         #kl_batch = self.beta *( - .5 * K.sum(1 + log_var - K.square(mu) - K.exp(log_var), axis=1))
         kl_batch = self.beta * ( - 0.5 * K.sum(1 + log_var - prior_log_var - ((K.square(mu - self.prior_mean) + K.exp(log_var)) / prior_var), axis=1))
         self.add_loss(K.mean(kl_batch), inputs=inputs)
+        return inputs
+
+class CrossentropyLayer(Layer):
+
+    """ Identity transform layer that adds Cross-entropy to the final model loss """
+
+    def __init__(self, labels, *args, **kwargs):
+        self.is_placeholder = True
+        self.labels = labels
+        super(CrossentropyLayer, self).__init__(*args, **kwargs)
+
+    def call(self, inputs):
+        z_cat = inputs
+        cce = K.categorical_crossentropy(self.labels, z_cat)
+        self.add_loss(K.mean(cce), inputs=inputs)
         return inputs
 
 class VAE(object):
@@ -99,7 +113,9 @@ class VAE(object):
         meta_next_notes_output_length=16,
         meta_next_notes_weight=1.0,
         meta_next_notes_teacher_force=False,
-        activation_before_splitting='tanh'
+        activation_before_splitting='tanh',
+        #------ ADDON -------
+        gumbel=0.05
         ):
         self.encoder = None
         self.decoder = None
@@ -172,6 +188,17 @@ class VAE(object):
 
         self.activation_before_splitting = activation_before_splitting
 
+        # ---- Add on : latent space embedding:
+        
+        #self.pitch_embedding = keras.Input(K.random_uniform([89, 32], -1.0, 1.0), name="pitch_embedding")
+        self.style_embedding = K.random_uniform([self.num_composers, self.latent_rep_size],  -1.0, 1.0)
+            # K.variable(
+            # K.random_uniform([self.num_composers, self.latent_rep_size],  -1.0, 1.0), # [2,256]
+            # name="style_embedding")
+        
+        # ---- other:
+        self.gumbel = gumbel
+
         if optimizer == 'RMSprop': self.optimizer = keras.optimizers.RMSprop(lr=learning_rate)
         if optimizer == 'Adam': self.optimizer = keras.optimizers.Adam(lr=learning_rate)
 
@@ -218,7 +245,7 @@ class VAE(object):
             x = input_x
 
         ### add different input for encoder layers for each roll selected in settings.py
-        encoder_input_list = [input_x]
+        encoder_input_list = [input_x]#, self.style_embedding]
         if self.meta_instrument:
             if self.meta_instrument_length > 0:
                 meta_instrument_input = Input(shape=(self.meta_instrument_length, self.meta_instrument_dim), name='meta_instrument_input')
@@ -240,9 +267,13 @@ class VAE(object):
         else:
             meta_held_notes_input = None
 
-        encoded = self._build_encoder(x, meta_instrument_input, meta_velocity_input, meta_held_notes_input)
+        encoded, z_cat = self._build_encoder(x, meta_instrument_input, meta_velocity_input, meta_held_notes_input)
         self.encoder = Model(inputs=encoder_input_list, outputs=encoded)
 
+        '''TODO:
+        ajouter une cat_loss
+        update le codebook dans le training
+        '''
         
         encoded_input = Input(shape=(self.latent_rep_size,), name='encoded_input')
         
@@ -333,7 +364,8 @@ class VAE(object):
 
         decoded, meta_instrument_output, meta_velocity_output, meta_held_notes_output, meta_next_notes_output = self._build_decoder(decoder_x, encoded_input, 
             ground_truth_input, history_input, decoder_additional_input_layer, 
-            input_decoder_meta_instrument_start, input_decoder_meta_velocity_start, input_decoder_meta_held_notes_start, input_decoder_meta_next_notes_start, meta_next_notes_ground_truth_input)
+            input_decoder_meta_instrument_start, input_decoder_meta_velocity_start, 
+            input_decoder_meta_held_notes_start, input_decoder_meta_next_notes_start, meta_next_notes_ground_truth_input)
 
         loss_list = []
         loss_weights_list = []
@@ -493,7 +525,7 @@ class VAE(object):
         if self.extra_layer:
             h = Dense(self.lstm_size, name='extra_layer', activation=self.activation_before_splitting, kernel_initializer='glorot_uniform')(h)
 
-        if self.split_lstm_vector:
+        if self.split_lstm_vector: #true
             half_size = int(self.lstm_size/2)
             h_1 = Lambda(lambda x : x[:,:half_size], name='h_1', output_shape=(half_size,))(h)
             h_2 = Lambda(lambda x : x[:,half_size:], name='h_2', output_shape=(self.lstm_size-half_size,))(h)
@@ -502,28 +534,65 @@ class VAE(object):
             h_1 = h
             h_2 = h
 
-        def sampling(args):
-            z_mean_, z_log_var_ = args
-            batch_size = K.shape(z_mean_)[0]
-            epsilon = K.random_normal(shape=(batch_size, self.  _rep_size), mean=0., stddev=self.epsilon_std)
-            return z_mean_ + K.exp(z_log_var_ / 2) * epsilon 
+        #New sampling function with both style and content:
+        def sampling(enc_out, mode='cat'):
+            if mode == 'cont':
+                z_mean_, z_log_var_ = enc_out
+                batch_size = K.shape(z_mean_)[0]
+                epsilon = K.random_normal(shape=(batch_size, self.latent_rep_size), mean=0., stddev=self.epsilon_std) #reparametrization trick
+                z = z_mean_ + K.exp(z_log_var_ / 2) * epsilon 
+                #sample the distribution from z = mu+ eps. standard deviation
+            if mode == 'cat':
+                if True:
+                #if self.training:
+                    unif = K.random_uniform(shape=tf.shape(enc_out))
+                    gumbel_noise = -K.log(-K.log(unif + 1e-10) + 1e-10)
+                    logit = (enc_out + gumbel_noise) / self.gumbel
+                    z = tf.nn.softmax(logit)
+                #else:
+                    #z = ohc(logits=enc_out, dtype=tf.float32).sample()
+            return z
+
+        def dot_product(x):
+            style_embedding = K.random_uniform(shape=(self.num_composers, self.latent_rep_size), minval=-1.0, maxval=1.0)
+            z = K.dot(x, style_embedding)
+            return z
 
         #s_3 = (s_1^2 * s_2^2) / (s_1^2 + s_2^2)
         #tf.contrib.distributions.MultivariateNormalDiag(mean=0.0, stddev=0.05, seed=None)
         z_mean = Dense(self.latent_rep_size, name='z_mean', activation='linear', kernel_initializer='glorot_uniform')(h_1)
         z_log_var = Dense(self.latent_rep_size, name='z_log_var', activation='linear', kernel_initializer='glorot_uniform')(h_2)
         
-        if epsilon_factor > 0: # not used
+        if epsilon_factor > 0: # not used : 
             e = Input(shape=(1,), tensor=K.constant(self.epsilon_factor))
             scaled_z_log_var = Add()[z_log_var, e]
             z_mean, scaled_z_log_var = KLDivergenceLayer(beta=self.beta, prior_mean=self.prior_mean, prior_std=self.prior_std, name='kl_layer')([z_mean, scaled_z_log_var])
         else:
             z_mean, z_log_var = KLDivergenceLayer(beta=self.beta, prior_mean=self.prior_mean, prior_std=self.prior_std, name='kl_layer')([z_mean, z_log_var])
-        z_content = Lambda(sampling, output_shape=(self.latent_rep_size,), name='lambda')([z_mean, z_log_var])
+        z_content = Lambda(lambda x: sampling(x, mode='cont'), output_shape=(self.latent_rep_size,), name='sample_cont')([z_mean, z_log_var])
 
-        z = Concatenate(name=)([z_content,z_style])
+        #--------------
+        # add style codebook embedding from Clavinet
+        z_style = Dense(self.latent_rep_size, name='style_head', activation='relu', kernel_initializer='glorot_uniform')(h) #glorot = xavier
+        z_style_pre_cat = Dense(self.num_composers, name='style_cat', activation='relu', kernel_initializer='glorot_uniform')(z_style)
+        
+        # add loss for cat
+        #z_style_cat = CrossentropyLayer(labels=, name='z_cat_crossentropy_layer')(z_style_cat)
 
-        return (z)
+        z_style_cat = Lambda(lambda x : sampling(x, mode='cat'), name='sample_cat')(z_style_pre_cat)
+        # make z_cat_logit categorical distribution differentiable for backpropagation
+
+        #import pdb; pdb.set_trace()
+        '''PBL = LAMBDA FUNC'''
+        #APROACH 1
+        #style_embedding = K.random_uniform(shape=(self.num_composers, self.latent_rep_size), minval=-1.0, maxval=1.0)
+        #z_style_codebook = Dot(axes=(1, 0), name='style_embedding')([z_style_cat, style_embedding])
+        #APROACH 2
+        z_style_codebook = Lambda(dot_product, name='dot_embedding')(z_style_cat)
+        #--------------
+        z = Add()([z_content, z_style_codebook])
+
+        return (z, z_style_pre_cat)
 
 
     def _build_decoder(self, input_layer, encoded, ground_truth, history_input, decoder_additional_input_layer, input_decoder_meta_instrument_start, input_decoder_meta_velocity_start, input_decoder_meta_held_notes_start, input_decoder_meta_next_notes_start, meta_next_notes_ground_truth_input):
