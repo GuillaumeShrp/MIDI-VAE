@@ -40,16 +40,15 @@ class CrossentropyLayer(Layer):
 
     """ Identity transform layer that adds Cross-entropy to the final model loss """
 
-    def __init__(self, labels, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.is_placeholder = True
-        self.labels = labels
         super(CrossentropyLayer, self).__init__(*args, **kwargs)
 
     def call(self, inputs):
-        z_cat = inputs
-        cce = K.categorical_crossentropy(self.labels, z_cat)
+        z_cat, cat_input = inputs
+        cce = K.categorical_crossentropy(z_cat, cat_input)
         self.add_loss(K.mean(cce), inputs=inputs)
-        return inputs
+        return z_cat
 
 class VAE(object):
     def create(self, 
@@ -246,6 +245,10 @@ class VAE(object):
 
         ### add different input for encoder layers for each roll selected in settings.py
         encoder_input_list = [input_x]#, self.style_embedding]
+
+        cat_input = Input(shape=(self.num_composers,), name='cat_input')
+        encoder_input_list.append(cat_input)
+
         if self.meta_instrument:
             if self.meta_instrument_length > 0:
                 meta_instrument_input = Input(shape=(self.meta_instrument_length, self.meta_instrument_dim), name='meta_instrument_input')
@@ -267,7 +270,7 @@ class VAE(object):
         else:
             meta_held_notes_input = None
 
-        encoded, z_cat = self._build_encoder(x, meta_instrument_input, meta_velocity_input, meta_held_notes_input)
+        encoded, z_cat = self._build_encoder(x, cat_input, meta_instrument_input, meta_velocity_input, meta_held_notes_input)
         self.encoder = Model(inputs=encoder_input_list, outputs=encoded)
 
         '''TODO:
@@ -288,7 +291,7 @@ class VAE(object):
 
         autoencoder_decoder_input_list = [input_decoder_x, encoded]
         decoder_input_list = [input_decoder_x, encoded_input]
-        autoencoder_input_list = [input_x, input_decoder_x]
+        autoencoder_input_list = [input_x, cat_input, input_decoder_x]
         autoencoder_output_list = []
 
         
@@ -479,7 +482,7 @@ class VAE(object):
                                  sample_weight_mode=sample_weight_modes,
                                  metrics=metrics_list)
 
-    def _build_encoder(self, x, meta_instrument_input=None, meta_velocity_input=None, meta_held_notes_input=None):
+    def _build_encoder(self, x, cat_input, meta_instrument_input=None, meta_velocity_input=None, meta_held_notes_input=None):
         h = x
         if self.bidirectional: #always false: musique is design to be read in only one direction (left to right)
 
@@ -577,20 +580,15 @@ class VAE(object):
         z_style_pre_cat = Dense(self.num_composers, name='style_cat', activation='relu', kernel_initializer='glorot_uniform')(z_style)
         
         # add loss for cat
-        #z_style_cat = CrossentropyLayer(labels=, name='z_cat_crossentropy_layer')(z_style_cat)
+        z_style_pre_cat = CrossentropyLayer(name='z_cat_crossentropy_layer')([z_style_pre_cat, cat_input])
 
         z_style_cat = Lambda(lambda x : sampling(x, mode='cat'), name='sample_cat')(z_style_pre_cat)
         # make z_cat_logit categorical distribution differentiable for backpropagation
 
         #import pdb; pdb.set_trace()
-        '''PBL = LAMBDA FUNC'''
-        #APROACH 1
-        #style_embedding = K.random_uniform(shape=(self.num_composers, self.latent_rep_size), minval=-1.0, maxval=1.0)
-        #z_style_codebook = Dot(axes=(1, 0), name='style_embedding')([z_style_cat, style_embedding])
-        #APROACH 2
         z_style_codebook = Lambda(dot_product, name='dot_embedding')(z_style_cat)
         #--------------
-        z = Add()([z_content, z_style_codebook])
+        z = Add(name='z')([z_content, z_style_codebook])
 
         return (z, z_style_pre_cat)
 
@@ -851,8 +849,10 @@ class VAE(object):
 # I: instruments for each voice of shape (max_voices, different_instruments)
 # V: velocity information of shape (num_samples, output_length==input_length), values between 0 and 1 when there is no silent note, 1 denotes MAX_VELOCITY
 # D: duration information of shape (num_samples, output_length==input_length), values are 1 if a note is held
-def prepare_encoder_input_list(X,I,V,D):
+def prepare_encoder_input_list(X,C,I,V,D):
     num_samples = X.shape[0]
+    
+    C = np.asarray([to_categorical(C, num_classes=num_classes)]*num_samples).squeeze()
 
     #transform duration into categorical
     D_cat = np.zeros((D.shape[0], D.shape[1], 2))
@@ -879,7 +879,7 @@ def prepare_encoder_input_list(X,I,V,D):
     I = np.tile(np.expand_dims(I, axis=0), (num_samples,1,1))
 
     if meta_instrument or meta_velocity or meta_held_notes:
-        encoder_input_list = [X]
+        encoder_input_list = [X,C]
         if meta_instrument:
             encoder_input_list.append(I)
         if meta_velocity:
@@ -889,7 +889,7 @@ def prepare_encoder_input_list(X,I,V,D):
 
         return encoder_input_list
     else:
-        return X
+        return [X,C]
 
 
 # prerpares autoencoder input and output for a song that is already split
@@ -1001,11 +1001,12 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
 
     #transform C into categorical format as well and duplicate it by num_samples
     C = np.asarray([to_categorical(C, num_classes=num_classes)]*num_samples).squeeze()
+    #ie ohv : 0 = [1, 0], 1 = [0, 1]
 
     #tile the meta_instrument as well for every sample
     meta_instrument_input = np.tile(np.expand_dims(I, axis=0), (num_samples,1,1))
 
-    input_list = [X,Y_start]
+    input_list = [X,C,Y_start]
 
     output_list = [Y]
 
@@ -1044,12 +1045,12 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
             else:
                 sample_weight = [sample_weight, sample_weight_composer_instrument_decoder]
 
-    if teacher_force:
+    if teacher_force: #false
         input_list.append(Y)
 
-    if history:
+    if history: #true
         input_list.append(H)
-    if decoder_additional_input:
+    if decoder_additional_input: #false to true
         decoder_additional_input_list = []
         if decoder_input_composer:
             decoder_additional_input_list.extend(C)
@@ -1063,7 +1064,7 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
         decoder_additional_input_list = np.asarray(decoder_additional_input_list)
         input_list.append(decoder_additional_input_list)
 
-    if meta_instrument:
+    if meta_instrument: #true
         meta_instrument_start = np.zeros((num_samples, meta_instrument_dim))
         input_list.append(meta_instrument_start)
         input_list.append(meta_instrument_input)
@@ -1075,7 +1076,7 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
             else:
                 sample_weight = [sample_weight, sample_weight_meta_instrument]
 
-    if meta_velocity:
+    if meta_velocity: #true
         meta_velocity_start = np.zeros((num_samples,))
         input_list.append(meta_velocity_start)
         input_list.append(V)
@@ -1087,7 +1088,7 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
             else:
                 sample_weight = [sample_weight, sample_weight_meta_velocity]
 
-    if meta_held_notes:
+    if meta_held_notes: #false
         meta_held_notes_start = np.zeros((num_samples,2))
         input_list.append(meta_held_notes_start)
         input_list.append(D)
@@ -1099,7 +1100,7 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
             else:
                 sample_weight = [sample_weight, sample_weight_meta_held_notes]
 
-    if meta_next_notes:
+    if meta_next_notes: #false
         meta_next_notes_start = np.zeros((num_samples,output_dim))
         input_list.append(meta_next_notes_start)
         output_list.append(N)
@@ -1111,16 +1112,18 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
             else:
                 sample_weight = [sample_weight, sample_weight_meta_next_notes]
 
-    if include_composer_decoder:
+    #input_list.append(C) #add Cat to the encoder input to add the loss
+
+    if include_composer_decoder: #true
         output_list.append(C)
 
-    if signature_decoder:
+    if signature_decoder: #false
         output_list.append(S)
 
-    if composer_decoder_at_notes_output:
+    if composer_decoder_at_notes_output: #false
         output_list.append(C)
 
-    if composer_decoder_at_instrument_output:
+    if composer_decoder_at_instrument_output: #false
         output_list.append(C)
 
     if return_sample_weight:
