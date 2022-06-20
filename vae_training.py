@@ -78,7 +78,7 @@ model.create( input_dim=input_dim,
     beta=beta, 
     prior_mean=prior_mean,
     prior_std=prior_std,
-    decoder_additional_input=decoder_additional_input, #not used
+    decoder_additional_input=decoder_additional_input, #not used USE to add cat in lat for codebook
     decoder_additional_input_dim=decoder_additional_input_dim, 
     extra_layer=extra_layer,
     meta_instrument= meta_instrument,
@@ -289,7 +289,7 @@ def test():
         #calculate history if desired
         if history:
             #get the representation by feeding the inputs into the encoder
-            encoder_input_list = vae_definition.prepare_encoder_input_list(X,I,V,D)
+            encoder_input_list = vae_definition.prepare_encoder_input_list(X,C,I,V,D)
             representation_list = encoder.predict(encoder_input_list, batch_size=batch_size, verbose=False)
             #roll the list by one to save the representation of the last sample for each input
             H = np.zeros(representation_list.shape)
@@ -795,7 +795,7 @@ for e in range(start_epoch, epochs):
                 H = np.zeros((X.shape[0], latent_dim))
             else:
                 #get the representation by feeding the inputs into the encoder
-                encoder_input_list = vae_definition.prepare_encoder_input_list(X,I,V,D)
+                encoder_input_list = vae_definition.prepare_encoder_input_list(X,C,I,V,D)
                 representation_list = encoder.predict(encoder_input_list, batch_size=batch_size, verbose=False)
                 #roll the list by one to save the representation of the last sample for each input
                 H = np.zeros(representation_list.shape)
@@ -804,6 +804,14 @@ for e in range(start_epoch, epochs):
             H = np.zeros((X.shape[0], latent_dim))
 
         input_list, output_list, sample_weight = vae_definition.prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_weight=True)
+
+        """ input_list[3] = ohv of categorical
+        --> add it to the decoder in order to compute the loss with z_cat
+        See how hist var in def from autoencoder.fit
+
+        COMPRENDRE comment KLdivergence layer ajoute la loss au total 
+        et puis faire pareil avec la input_list[3] dans l'input de l'encoder
+        """
 
         tensorboard_callback = callbacks.TensorBoard(
             log_dir = "tb_callback_dir", histogram_freq = 1,
