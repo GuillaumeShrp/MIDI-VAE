@@ -1,17 +1,8 @@
 from settings import *
-from tensorflow.keras.models import Sequential
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Input, RepeatVector
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import LSTM, GRU
-from tensorflow.keras.layers import TimeDistributed
-from tensorflow.keras.layers import Dense, Activation
-from tensorflow.keras.layers import Embedding
-from tensorflow.keras.optimizers import RMSprop, Adam
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.layers import Bidirectional
-from random import shuffle
-import progressbar
+from keras.layers import Input, GRU, LSTM, Dense
+from keras.models import Model
+from keras.utils import to_categorical
+from keras.optimizers import RMSprop, Adam
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -19,19 +10,8 @@ import os
 import numpy as np
 import _pickle as pickle
 import time
-import data_class
-
-from sklearn.model_selection import train_test_split
-from sklearn.utils import class_weight
-
-import tensorflow as tf
-#from keras.backend.tensorflow_backend import set_session
-import pretty_midi as pm
-import sys
-import time
 
 from tikzplotlib import save as tikz_save
-
 from import_midi import import_midi_from_folder
 
 
@@ -46,7 +26,7 @@ lstm_size = 256
 batch_size = 512
 learning_rate = 0.00002 #1e-06
 step_size = 1
-save_step = 10
+save_step = 100
 shuffle_train_set = True
 bidirectional = False
 embedding = False
@@ -162,8 +142,6 @@ def test(testID):
         num_samples = X.shape[0]
         c = C_test[i]
         Y = np.asarray([to_categorical(c, num_classes=num_classes)]*num_samples).squeeze()
-        print(X.shape)
-        print(C_train)
 
         scores = model.evaluate(X,Y , batch_size=batch_size, verbose=verbose)
         if reset_states:
@@ -175,7 +153,7 @@ def test(testID):
             y_class_test = np.argmax(y_val)
             y_class_predicted = np.argmax(y_predicted)
             confusion_matrix[y_class_predicted, y_class_test] += 1
-        #bar.update(i+1)
+
 
     accuracy = np.sum(np.diagonal(confusion_matrix)) / np.sum(confusion_matrix)
     total_test_loss_array.append(total_test_loss/test_set_size)
@@ -241,7 +219,6 @@ for e in range(1, epochs+1):
     
     print('Epoch ', e, 'of ', epochs, 'Epochs\nTraining:')
 
-
     if shuffle_train_set:
 
         permutation = np.random.permutation(len(X_train))
@@ -254,8 +231,6 @@ for e in range(1, epochs+1):
         V_train = [V_train[i] for i in permutation]
         D_train = [D_train[i] for i in permutation]
         T_train = [T_train[i] for i in permutation]
-
-    #bar = progressbar.ProgressBar(max_value=train_set_size)
     
     # Train model with each song seperately
     for i, train_song in enumerate(X_train):
@@ -280,7 +255,6 @@ for e in range(1, epochs+1):
 
             total_train_loss += np.mean(hist.history['loss'])
             total_train_accuracy += np.mean(hist.history['acc'])
-        #bar.update(i+1)
     if (e+1)%test_step is 0:
         total_train_loss = total_train_loss/train_set_size
         total_train_loss_array.append(total_train_loss)

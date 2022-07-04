@@ -6,7 +6,7 @@
 from settings import *
 #from tensorflow.keras.utils import to_categorical
 from random import shuffle
-import progressbar
+#import progressbar
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -35,7 +35,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 # ----------------------------------------------------------------------------------------------
 
 # Path where the polyphonic models are saved:
-model_path = 'models/autoencode/vae/'
+model_path = 'models/vae/'
 model_filetype = '.pickle'
 
 assert(output_length > 0)
@@ -804,14 +804,6 @@ for e in range(start_epoch, epochs):
             H = np.zeros((X.shape[0], latent_dim))
 
         input_list, output_list, sample_weight = vae_definition.prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_weight=True)
-
-        """ input_list[3] = ohv of categorical
-        --> add it to the decoder in order to compute the loss with z_cat
-        See how hist var in def from autoencoder.fit
-
-        COMPRENDRE comment KLdivergence layer ajoute la loss au total 
-        et puis faire pareil avec la input_list[3] dans l'input de l'encoder
-        """
 
         tensorboard_callback = callbacks.TensorBoard(
             log_dir = "tb_callback_dir", histogram_freq = 1,

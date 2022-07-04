@@ -1,4 +1,5 @@
 #Script to import the files
+from sklearn.utils import shuffle
 from settings import *
 import pretty_midi as pm
 import midi_functions as mf
