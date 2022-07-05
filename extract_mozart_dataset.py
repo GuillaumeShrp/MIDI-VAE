@@ -2,6 +2,7 @@ import requests, bs4
 
 
 url = 'https://www.kunstderfuge.com/mozart.htm'
+download_url = 'https://www.kunstderfuge.com/'
 response = requests.get(url)
 
 
@@ -27,7 +28,7 @@ for s in songs:
     for ver, name in zip(versions, versions_name):
 
         link = ver.get('href')
-        link_url = requests.compat.urljoin(url, link)
+        link_url = requests.compat.urljoin(download_url, link)
         print(link)
         if link != None and link.endswith('.mid'):
 
