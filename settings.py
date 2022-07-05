@@ -5,10 +5,10 @@ import numpy as np
 
 
 # This is where you should put your midi files
-source_folder = 'data/'
+source_folder = 'data/complete/'
 
 # fast way to import data once you have preprocessed them and saved in a pickle file
-pickle_load_path = 'pickles/'
+pickle_load_path = 'pickles/Jzz&Mzt/'
 
 #------------------------------------
 # Generation parameters
@@ -33,7 +33,7 @@ do_not_sample_in_evaluation = True
 
 
 # Folder names or file names will be classified by those labels
-classes = ['Jazz', 'Nottingham'] #list of strings like 'Bach', 'Mozart'. Name a folder in your source_folder like that and make sure there are no files with that name
+classes = ['JSB_chorales', 'Nottingham'] #list of strings like 'Bach', 'Mozart'. Name a folder in your source_folder like that and make sure there are no files with that name
 
 #whether to include unknown classes as a third class
 include_unknown = False 
@@ -52,18 +52,18 @@ test_train_set = False
 t = str(int(round(time.time())))
 
 #activate the fast route to not always have to preprocess midi files
-load_from_pickle_instead_of_midi = False
+load_from_pickle_instead_of_midi = True
 
-save_imported_midi_as_pickle = True
+save_imported_midi_as_pickle = False
 if save_imported_midi_as_pickle:
-    pickle_store_folder = 'pickles/' + t + "/" #folder where pickles are stored (!= where loaded)
+    pickle_store_folder = 'pickles/Jzz&Mzt/' #folder where pickles are stored (!= where loaded)
     if not os.path.exists(pickle_store_folder):
         os.makedirs(pickle_store_folder)
 
 save_anything = True
 
-split_equally_to_train_and_test = False
-test_fraction = 0.2
+split_equally_to_train_and_test = True
+test_fraction = 0.1
 save_preprocessed_midi = False
 smaller_training_set_factor = 1.0 #multiply training set size by that factor (if higher than 1.0, will have unbalanced dataset if split_equally_to_train_and_test)
 
@@ -71,7 +71,7 @@ high_crop = 84 #where to cut off high notes. 84 = C6
 low_crop = 24#where to cut off low notes. 24=C1
 num_notes = 128 #constant for MIDI
 new_num_notes = high_crop - low_crop #the actual number of pitches to use
-SMALLEST_NOTE = 16 #set this to 16, if you want to include 16th notes as smallest notes. has to be a multiple of 4
+SMALLEST_NOTE = 32 #set this to 16, if you want to include 16th notes as smallest notes. has to be a multiple of 4
 MAXIMAL_NUMBER_OF_VOICES_PER_TRACK = 1 #will get overriden if there are less tracks than num_voices for a file
 MAX_VELOCITY = 127.
 
@@ -105,8 +105,9 @@ song_completion = False
 # VAE parameters (for vae_training and vae_evaluation)
 #------------------------------------
 
-input_length =  16 # "We choose the 16th note as smallest unit"
-output_length = 16
+# length of the final sheet
+input_length =  16*7 # "We choose the 16th note as smallest unit"
+output_length = 16*7 # 4x4 notes
 lstm_size = 256
 latent_dim = 256
 batch_size = 256
@@ -173,7 +174,7 @@ if decoder_input_composer:
 signature_vector_length = 15
 append_signature_vector_to_latent = False
 if append_signature_vector_to_latent:
-    decoder_additional_input = True
+    decoder_additional_input = False
     decoder_additional_input_dim += signature_vector_length
 
 # use instrument roll encoder and decoder
@@ -204,6 +205,7 @@ if composer_decoder_at_notes_output or composer_decoder_at_instrument_output or 
 else:
     num_composers = 0
 
+#16 x4 = 64 donc 4 bars de 4 noirs
 input_dim = new_num_notes + composer_length + silent_dim + instrument_dim # 60+0+1+0 = 61 because not attached instrument
 output_dim = new_num_notes+silent_dim + instrument_dim
 
@@ -231,7 +233,7 @@ meta_next_notes_teacher_force=False #Not implemented in vae_training or vae_eval
 
 activation_before_splitting='tanh'
 
-epochs = 2000
+epochs = 1
 test_step = 1
 verbose = True
 show_plot = False

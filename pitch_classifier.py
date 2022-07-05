@@ -1,17 +1,8 @@
 from settings import *
-from tensorflow.keras.models import Sequential
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Input, RepeatVector
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import LSTM, GRU
-from tensorflow.keras.layers import TimeDistributed
-from tensorflow.keras.layers import Dense, Activation
-from tensorflow.keras.layers import Embedding
-from tensorflow.keras.optimizers import RMSprop, Adam
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.layers import Bidirectional
-from random import shuffle
-import progressbar
+from keras.layers import Input, GRU, LSTM, Dense
+from keras.models import Model
+from keras.utils import to_categorical
+from keras.optimizers import RMSprop, Adam
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -19,12 +10,7 @@ import os
 import numpy as np
 import _pickle as pickle
 import time
-import data_class
-from sklearn.model_selection import train_test_split
-from sklearn.utils import class_weight
 import tensorflow as tf
-#from keras.backend.tensorflow_backend import set_session
-import pretty_midi as pm
 import sys, time
 from import_midi import import_midi_from_folder
 from tikzplotlib import save as tikz_save
@@ -44,7 +30,7 @@ lstm_size = 256
 batch_size = 512
 learning_rate = 0.00002 #1e-06
 step_size = 1
-save_step = 10
+save_step = 100
 shuffle_train_set = True
 bidirectional = False
 embedding = False
@@ -89,7 +75,7 @@ model_path = model_path + model_name + '/'
 if not os.path.exists(model_path):
     os.makedirs(model_path)
 
-
+#simple classifier model build:
 inputs = Input(shape=(None, input_dim))
 lstm_outputs = inputs
 for layer_no in range(num_layers-1):
@@ -220,8 +206,6 @@ for e in range(epochs):
         V_train = [V_train[i] for i in permutation]
         D_train = [D_train[i] for i in permutation]
         T_train = [T_train[i] for i in permutation]
-
-    #bar = progressbar.ProgressBar(max_value=train_set_size)
     
     # Train model with each song seperately
     for i, train_song in enumerate(X_train):

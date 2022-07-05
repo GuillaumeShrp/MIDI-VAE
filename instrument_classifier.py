@@ -1,18 +1,9 @@
 from settings import *
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Input, RepeatVector
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import LSTM, GRU
-from tensorflow.keras.layers import TimeDistributed
-from tensorflow.keras.layers import Dense, Activation
-from tensorflow.keras.layers import Embedding
-from tensorflow.keras.optimizers import RMSprop, Adam
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.layers import Bidirectional
-from random import shuffle
-import progressbar
+from keras.layers import Input, GRU, LSTM, Dense
+from keras.models import Model
+from keras.utils import to_categorical
+from keras.optimizers import RMSprop, Adam
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -20,17 +11,10 @@ import os
 import numpy as np
 import _pickle as pickle
 import time
-from sklearn.model_selection import train_test_split
-from sklearn.utils import class_weight
 import tensorflow as tf
-#from keras.backend.tensorflow_backend import set_session
-import sys
-import pretty_midi as pm
+
 from tikzplotlib import save as tikz_save
-
 from import_midi import import_midi_from_folder
-import data_class
-
 
 # Path where the polyphonic models are saved:
 model_path = 'models/instrumentclustering/'
@@ -146,7 +130,6 @@ def test(testID):
             y_class_predicted = np.argmax(y_predicted)
             confusion_matrix[y_class_predicted, y_class_test] += 1
 
-        #bar.update(i+1)
 
     accuracy = np.sum(np.diagonal(confusion_matrix)) / np.sum(confusion_matrix)
     total_test_loss_array.append(total_test_loss/test_set_size)
@@ -184,7 +167,6 @@ def test(testID):
         if save_plot: 
             plt.savefig(model_path+'confusion_matrix' + str(testID) + '.png')
             tikz_save(model_path+'confusion_matrix' + str(testID) + '.tex', encoding='utf-8', show_info=False)
-
 
 
 # Save Parameters to text file
@@ -226,8 +208,6 @@ for e in range(epochs):
         D_train = [D_train[i] for i in permutation]
         T_train = [T_train[i] for i in permutation]
 
-    #bar = progressbar.ProgressBar(max_value=train_set_size)
-
     # Train model with each song seperatly
     for i, train_song in enumerate(X_train):
 
@@ -237,8 +217,6 @@ for e in range(epochs):
         c = C_train[i]
         Y = np.asarray([to_categorical(c, num_classes=num_classes)]*num_samples).squeeze()
 
-        print(X)
-        print(Y)
         hist = model.fit(X, Y,
                     epochs=1,
                     batch_size=batch_size,
@@ -248,7 +226,6 @@ for e in range(epochs):
         if reset_states:
             model.reset_states()
 
-        #bar.update(i+1)
         total_train_loss += np.mean(hist.history['loss'])
         total_train_accuracy += np.mean(hist.history['acc'])
     if e%test_step is 0:

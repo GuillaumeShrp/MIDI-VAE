@@ -32,9 +32,9 @@ for s in songs:
         print(link)
         if link != None and link.endswith('.mid'):
 
-            filename = 'data/original/mozart/' + name + '.mid'
+            filename = 'data/complete/mozart/' + name + '.mid'
             if s.text[0] != "»":
-                filename = 'data/original/mozart/' + title + '_' + name + '.mid'
+                filename = 'data/complete/mozart/' + title + '_' + name + '.mid'
             
             with open(filename, 'wb') as midifile:
                 midifile.write(requests.get(link_url).content)
