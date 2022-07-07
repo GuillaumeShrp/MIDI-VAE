@@ -2,10 +2,8 @@
 /pickles/
 /__pycache__/
 /.vscode/
-/models/instrumentclustering/
-/models/velocityclustering/
-/models/pitchclustering/
-/models/vae/
+/models/*
+!/models/vae/
 /autoencode_midi/
 /past_pickles/
 /evaluations/

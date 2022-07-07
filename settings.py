@@ -5,10 +5,10 @@ import numpy as np
 
 
 # This is where you should put your midi files
-source_folder = 'data/complete/'
+source_folder = 'data/Sample/'
 
 # fast way to import data once you have preprocessed them and saved in a pickle file
-pickle_load_path = 'pickles/Jzz&Mzt/'
+pickle_load_path = 'pickles/Jzz&MztSample/'
 
 #------------------------------------
 # Generation parameters
@@ -52,11 +52,11 @@ test_train_set = False
 t = str(int(round(time.time())))
 
 #activate the fast route to not always have to preprocess midi files
-load_from_pickle_instead_of_midi = True
+load_from_pickle_instead_of_midi = False
 
-save_imported_midi_as_pickle = False
+save_imported_midi_as_pickle = True
 if save_imported_midi_as_pickle:
-    pickle_store_folder = 'pickles/Jzz&Mzt/' #folder where pickles are stored (!= where loaded)
+    pickle_store_folder = 'pickles/Jzz&MztSample/' #folder where pickles are stored (!= where loaded)
     if not os.path.exists(pickle_store_folder):
         os.makedirs(pickle_store_folder)
 
@@ -233,7 +233,7 @@ meta_next_notes_teacher_force=False #Not implemented in vae_training or vae_eval
 
 activation_before_splitting='tanh'
 
-epochs = 1
+epochs = 11
 test_step = 1
 verbose = True
 show_plot = False

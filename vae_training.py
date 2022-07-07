@@ -35,7 +35,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 # ----------------------------------------------------------------------------------------------
 
 # Path where the polyphonic models are saved:
-model_path = 'models/vae/'
+model_path = 'models/vae_complete/'
 model_filetype = '.pickle'
 
 assert(output_length > 0)
