@@ -574,4 +574,26 @@ def import_midi_from_folder(folder):
 
     return V_train, V_test, D_train, D_test, T_train, T_test, I_train, I_test, Y_train, Y_test, X_train, X_test, c_train, c_test, train_paths, test_paths
 
-         
+
+
+
+def import_midi_solo(folder, C=0):
+    for path, subdirs, files in os.walk(folder):
+        for name in files:
+
+            _path = path.replace('\\', '/') + '/'
+            _name = name.replace('\\', '/')
+
+            if _name.endswith('.mid') or _name.endswith('.midi'):
+
+                shortpath = _path[len(folder):]
+                found = False
+                print("Importing style no" + str(C) + " song called " + _name)
+
+                X, Y, I, T, V, D = load_rolls(_path, _name)
+
+                 #remove ".mid"
+                if _name.endswith('.mid'): _name = _name[:-4]+"_"
+                else: _name = _name[:-5]+"_"
+
+    return V, D, T, I, Y, X, C, _name

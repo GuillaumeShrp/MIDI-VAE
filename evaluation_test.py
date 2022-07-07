@@ -1,4 +1,3 @@
-
 from enum import auto
 from import_midi import import_midi_from_folder, import_midi_solo
 from settings import *
@@ -128,7 +127,6 @@ def restructure_song_to_fit_more_instruments(Y, I, V, D):
 print('loading data...')
 folder = 'data/solo/'
 V, D, T, I, Y, X, C, name = import_midi_solo(folder, C=0)
-
 #V, D, T, I, Y, X, C, name = import_midi_from_folder(folder)
 
 # ----------------------------------------------------------------------------------------------
@@ -138,24 +136,20 @@ V, D, T, I, Y, X, C, name = import_midi_solo(folder, C=0)
 if test_reconstr:
     medley_name = name+str(time.time())[7:10]
 
-    print("y shape",X.shape) 
-    X = X[:,:,:-1]
+    X = X[:,:,:-1] #remove silence note
     X = X.reshape(-1, 60)
-    print("y shape",X.shape) 
-    V = V.reshape(-1,)
-    
+    V = V.reshape(-1,)    
     D = D.reshape(-1,)
     print("y shape",X.shape) #ok 0
     print("i shape",I.shape) #cf ln 182 : ok
     print("v shape",V.shape) #deniere des inputlist(output de prepare_autoencoder_input_and_output_list)
     print("d shape",D.shape) 
 
-    #X, I, V, D, N = vae_definition.process_decoder_outputs([X, I, V], sample_method) #detruit V et X 
     X = np.asarray(X)
     D = np.asarray(D)
     V = np.asarray(V)
 
-    #data_class.draw_pianoroll(prepare_for_drawing(X, V), name=medley_name, show=True, save_path=save_folder + medley_name)
+    data_class.draw_pianoroll(prepare_for_drawing(X, V), name=medley_name, show=True, save_path=save_folder + medley_name)
     X_all_programs, all_programs, V_all_programs, D_all_programs = restructure_song_to_fit_more_instruments(X, I, V, D)
     mf.rolls_to_midi(X_all_programs, all_programs, save_folder, medley_name, BPM, V_all_programs, D_all_programs)
 

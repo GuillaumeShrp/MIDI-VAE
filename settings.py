@@ -71,7 +71,7 @@ high_crop = 84 #where to cut off high notes. 84 = C6
 low_crop = 24#where to cut off low notes. 24=C1
 num_notes = 128 #constant for MIDI
 new_num_notes = high_crop - low_crop #the actual number of pitches to use
-SMALLEST_NOTE = 32 #set this to 16, if you want to include 16th notes as smallest notes. has to be a multiple of 4
+SMALLEST_NOTE = 64 #set this to 16, if you want to include 16th notes as smallest notes. has to be a multiple of 4
 MAXIMAL_NUMBER_OF_VOICES_PER_TRACK = 1 #will get overriden if there are less tracks than num_voices for a file
 MAX_VELOCITY = 127.
 

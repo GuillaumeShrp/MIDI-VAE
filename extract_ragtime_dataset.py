@@ -3,7 +3,7 @@ import requests, bs4, os
 url_list = ['https://www.primeshop.com/MIDILibrary/midlist2.htm', 'https://www.primeshop.com/MIDILibrary/midlist3.htm']
 download_url = 'https://www.primeshop.com/MIDILibrary/'
 
-save_folder = 'data/complete/ragtimesdzd/'
+save_folder = 'data/complete/ragtime/'
 if not os.path.exists(save_folder):
     os.makedirs(save_folder)   
 
@@ -21,5 +21,5 @@ for url in url_list:
             filename = save_folder + title.split('/')[1]
             with open(filename, 'wb') as midifile:
                 content = requests.get(link_url).content
-                if content <= 30000: #if midi file size <= 30ko
+                if len(content) <= 30000: #if midi file size <= 30ko
                     midifile.write(content)

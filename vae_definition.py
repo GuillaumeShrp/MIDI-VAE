@@ -429,7 +429,7 @@ class VAE(object):
             sample_weight_modes.append('None')
 
         
-        if self.include_composer_decoder: # not used
+        if self.include_composer_decoder: 
             predicted_composer = self._build_composer_decoder(encoded_input)
             self.composer_decoder = Model(encoded_input, predicted_composer, name='composer_decoder')
             autoencoder_output_list.append(self.composer_decoder(encoded))
@@ -1050,7 +1050,7 @@ def prepare_autoencoder_input_and_output_list(X,Y,C,I,V,D,S,H, return_sample_wei
 
     if history: #true
         input_list.append(H)
-    if decoder_additional_input: #false to true
+    if decoder_additional_input: #false
         decoder_additional_input_list = []
         if decoder_input_composer:
             decoder_additional_input_list.extend(C)

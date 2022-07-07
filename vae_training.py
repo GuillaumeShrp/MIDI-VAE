@@ -150,7 +150,22 @@ test_set_size = len(X_test)
 
 print(len(train_paths))
 print(len(test_paths))
-print(C_test)
+print(C_train,C_test)
+input("Correct settings?")
+
+
+# ----------------------------------------------------------------------------------------------
+# Prepare model path
+# ----------------------------------------------------------------------------------------------
+
+
+fd = {'include_composer_feature': include_composer_feature, 'highcrop': high_crop, 'lowcrop':low_crop, 'lr': learning_rate, 'opt': optimizer,
+'bi': bidirectional, 'lstm_size': lstm_size, 'latent': latent_dim, 'trainsize': train_set_size, 'testsize': test_set_size, 'input_length': input_length,
+'output_length': output_length, 'reset_states': reset_states, 'compdec': include_composer_decoder, 'num_layers_encoder': num_layers_encoder, 'num_layers_decoder': num_layers_decoder, 
+'beta': beta, 'lr': learning_rate, 'epsstd': epsilon_std}
+t = time.strftime("%Y%m%d-%H%M%S")
+#model_name = t+'-_ls_inlen_%(input_length)s_outlen_%(output_length)s_beta_%(beta)s_lr_%(lr)s_lstmsize_%(lstm_size)s_latent_%(latent)s_trainsize_%(trainsize)s_testsize_%(testsize)s_epsstd_%(epsstd)s' % fd
+model_name = t+'_trainsize_%(trainsize)s_testsize_%(testsize)s_inlen_%(input_length)s_outlen_%(output_length)s_beta_%(beta)s_lr_%(lr)s_epsstd_%(epsstd)s' % fd
 
 
 # ----------------------------------------------------------------------------------------------
