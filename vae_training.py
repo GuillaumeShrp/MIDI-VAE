@@ -26,6 +26,9 @@ import sys, time
 from import_midi import import_midi_from_folder
 import data_class
 from tikzplotlib import save as tikz_save
+import pydot
+import graphviz
+import keras
 
 # remove depreciation warnings 
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -114,6 +117,9 @@ model.create( input_dim=input_dim,
 encoder = model.encoder
 decoder = model.decoder
 autoencoder = model.autoencoder
+keras.utils.plot_model(encoder, to_file='img/encoder.png', show_shapes=True, show_layer_names=True)
+keras.utils.plot_model(decoder, to_file='img/decoder.png', show_shapes=True, show_layer_names=True)
+keras.utils.plot_model(autoencoder, to_file='img/autoencoder.png', show_shapes=True, show_layer_names=True)
 
 print(encoder.summary())
 print(decoder.summary())
@@ -823,7 +829,9 @@ for e in range(start_epoch, epochs):
         tensorboard_callback = callbacks.TensorBoard(
             log_dir = "tb_callback_dir", histogram_freq = 1,
         )
-
+        
+        #verifier que les poids du code book chages
+        #init_weights = autoencoder.weights()
         hist = autoencoder.fit(input_list, output_list,
                 epochs=1,
                 batch_size=batch_size,
@@ -834,7 +842,6 @@ for e in range(start_epoch, epochs):
         if reset_states:
             autoencoder.reset_states()
 
-        #bar.update(train_song_num+1)
 
 
         total_train_loss += np.mean(hist.history['loss'])

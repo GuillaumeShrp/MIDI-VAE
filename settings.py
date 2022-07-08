@@ -5,7 +5,7 @@ import numpy as np
 
 
 # This is where you should put your midi files
-source_folder = 'data/Sample/'
+source_folder = 'data/sample/'
 
 # fast way to import data once you have preprocessed them and saved in a pickle file
 pickle_load_path = 'pickles/Jzz&MztSample/'

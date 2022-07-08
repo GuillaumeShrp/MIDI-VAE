@@ -270,14 +270,8 @@ class VAE(object):
         else:
             meta_held_notes_input = None
 
-        encoded, z_cat = self._build_encoder(x, cat_input, meta_instrument_input, meta_velocity_input, meta_held_notes_input)
+        encoded = self._build_encoder(x, cat_input, meta_instrument_input, meta_velocity_input, meta_held_notes_input)
         self.encoder = Model(inputs=encoder_input_list, outputs=encoded)
-
-        '''TODO:
-        ajouter une cat_loss
-        update le codebook dans le training
-        '''
-        
         encoded_input = Input(shape=(self.latent_rep_size,), name='encoded_input')
         
         
@@ -572,25 +566,27 @@ class VAE(object):
             z_mean, scaled_z_log_var = KLDivergenceLayer(beta=self.beta, prior_mean=self.prior_mean, prior_std=self.prior_std, name='kl_layer')([z_mean, scaled_z_log_var])
         else:
             z_mean, z_log_var = KLDivergenceLayer(beta=self.beta, prior_mean=self.prior_mean, prior_std=self.prior_std, name='kl_layer')([z_mean, z_log_var])
-        z_content = Lambda(lambda x: sampling(x, mode='cont'), output_shape=(self.latent_rep_size,), name='sample_cont')([z_mean, z_log_var])
+        z_content = Lambda(lambda x: sampling(x, mode='cont'), output_shape=(self.latent_rep_size,), name='z_cont')([z_mean, z_log_var])
 
         #--------------
-        # add style codebook embedding from Clavinet
-        z_style = Dense(self.latent_rep_size, name='style_head', activation='relu', kernel_initializer='glorot_uniform')(h) #glorot = xavier
-        z_style_pre_cat = Dense(self.num_composers, name='style_cat', activation='relu', kernel_initializer='glorot_uniform')(z_style)
-        
-        # add loss for cat
-        z_style_pre_cat = CrossentropyLayer(name='z_cat_crossentropy_layer')([z_style_pre_cat, cat_input])
 
-        z_style_cat = Lambda(lambda x : sampling(x, mode='cat'), name='sample_cat')(z_style_pre_cat)
+        z_cat_descrete = Dense(self.num_composers, name='z_cat_descrete', activation='relu', kernel_initializer='glorot_uniform')(h) #glorot = xavier
+        # add loss for cat
+        z_cat_descrete = CrossentropyLayer(name='z_cat_crossentropy_layer')([z_cat_descrete, cat_input])
+        print("expected style: ",z_cat_descrete)
+        print("computed style: ",cat_input)
+
+        z_cat_gumbel = Lambda(lambda x : sampling(x, mode='cat'), name='z_cat_gumbel')(z_cat_descrete)
         # make z_cat_logit categorical distribution differentiable for backpropagation
 
         #import pdb; pdb.set_trace()
-        z_style_codebook = Lambda(dot_product, name='dot_embedding')(z_style_cat)
+        # add style codebook embedding from Clavinet:
+        z_style_codebook = Lambda(dot_product, name='codebook_embedding')(z_cat_gumbel)
+
         #--------------
         z = Add(name='z')([z_content, z_style_codebook])
 
-        return (z, z_style_pre_cat)
+        return (z)
 
 
     def _build_decoder(self, input_layer, encoded, ground_truth, history_input, decoder_additional_input_layer, input_decoder_meta_instrument_start, input_decoder_meta_velocity_start, input_decoder_meta_held_notes_start, input_decoder_meta_next_notes_start, meta_next_notes_ground_truth_input):
